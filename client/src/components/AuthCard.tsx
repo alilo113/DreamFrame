@@ -13,6 +13,9 @@ export default function AuthCard() {
   const [loginIdentifier, setLoginIdentifier] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
 
+  // error state can be added here if you want to display errors in the UI instead of alert
+  const [error, setError] = useState("")
+
   const toggleForm = () => {
     setIsLogin(!isLogin);
   };
@@ -38,17 +41,47 @@ export default function AuthCard() {
         const data = await res.json();
 
         if (!res.ok) {
-          alert(data.detail || "Signup failed");
+          setError(data.detail || "Signup failed");
           return;
         }
 
+        setError("");
         alert("Signup successful. Please login.");
         setIsLogin(true);
       } catch (err) {
         console.error(err);
-        alert("Network error");
+        setError("Network error");
       }
     }
+      else {
+        try {
+          const res = await fetch("http://127.0.0.1:8000/api/auth/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              // send it as "email" or "username" for the backend
+              email: loginIdentifier, // or username: loginIdentifier
+              password: loginPassword
+            }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            setError(data.detail || "Login failed");
+            return;
+          }
+
+          localStorage.setItem("token", data.token); // your backend returns "token", not "access_token"
+          setError(""); // Clear any previous error messages       
+        }
+        catch(error){
+          console.log(error);
+          setError("Network error");
+        }
+      }
   }
 
   return (
@@ -96,6 +129,7 @@ export default function AuthCard() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full px-4 py-3 rounded-lg bg-white/10 text-white"
               />
+              <div className="text-red-500 text-sm mt-2">{error}</div>
             </>
           ) : (
             <>
@@ -114,6 +148,7 @@ export default function AuthCard() {
                 onChange={(e) => setLoginPassword(e.target.value)}
                 className="w-full px-4 py-3 rounded-lg bg-white/10 text-white"
               />
+              <div className="text-red-500 text-sm mt-2">{error}</div>
             </>
           )}
 

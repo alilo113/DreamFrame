@@ -131,4 +131,29 @@ async def verify_email(token: str):
 
     # Generate JWT token after verification
     jwt_token = generate_jwt(str(user["_id"]), user["username"])
+    print(f"User collection: {users_collection}")
     return {"message": "Email verified successfully!", "token": jwt_token}
+
+@auth_router.post("/login")
+@limiter.limit("10/minute")
+async def login(request: Request):
+    data = await request.json()
+
+    email = (data.get("email") or "").strip()
+    username = (data.get("username") or "").strip()
+    password = data.get("password")
+
+    if not password or (not email and not username):
+        raise HTTPException(status_code=400, detail="Email or username and password are required.")
+    
+    user = await users_collection.find_one({"$or": [{"username": username}, {"email": email}]})
+    password_valid = user and bcrypt.checkpw(password.encode("utf-8"), user["password"].encode("utf-8"))
+
+    if not user or not password_valid:
+        raise HTTPException(status_code=401, detail="Invalid credentials.")
+    
+    if not user.get("verified"):
+        raise HTTPException(status_code=403, detail="Email not verified. Please check your inbox.")
+    
+    jwt_token = generate_jwt(str(user["_id"]), user["username"])
+    return {"message": "Login successful!", "token": jwt_token}
