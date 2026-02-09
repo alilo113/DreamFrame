@@ -1,28 +1,41 @@
 import { useState } from "react"
 
 export default function Dashboard() {
-    const [prompt, setPrompt] = useState("")
+  const [prompt, setPrompt] = useState("")
+  const [loading, setLoading] = useState(false)
 
-    async function generatingImages(e: { preventDefault: () => void }) {
-        e.preventDefault()
+  async function sendingPrompt(e: React.FormEvent) {
+    e.preventDefault()
 
-        try {
-            const res = await fetch("http://127.0.0.1:8000/api/auth/generate", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ prompt })
-            })
+    if (!prompt.trim()) return
 
-            const data = await res.json()
-            console.log(data)
-        } catch (error) {
-            console.error(error)
-        }
+    try {
+      setLoading(true)
+
+      const res = await fetch("http://127.0.0.1:8000/api/auth/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify({ prompt })
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.detail || "Generation failed")
+      }
+
+      console.log(data)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
     }
+  }
 
-    return (
+  return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       {/* Top bar */}
       <header className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
@@ -47,35 +60,56 @@ export default function Dashboard() {
       <main className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Prompt section */}
         <section className="lg:col-span-2 space-y-6">
-          <div>
-            <h2 className="text-lg font-medium mb-2">
-              Prompt
-            </h2>
-            <textarea
-              placeholder="Describe the image you want to generate..."
-              className="w-full h-40 resize-none rounded-xl bg-zinc-900 border border-zinc-800 p-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              value = {prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex gap-3">
-              <button className="px-4 py-2 rounded-lg bg-zinc-800 text-sm hover:bg-zinc-700 transition">
-                Style
-              </button>
-              <button className="px-4 py-2 rounded-lg bg-zinc-800 text-sm hover:bg-zinc-700 transition">
-                Model
-              </button>
-              <button className="px-4 py-2 rounded-lg bg-zinc-800 text-sm hover:bg-zinc-700 transition">
-                Settings
-              </button>
+          <form onSubmit={sendingPrompt} className="space-y-6">
+            <div>
+              <h2 className="text-lg font-medium mb-2">
+                Prompt
+              </h2>
+              <textarea
+                placeholder="Describe the image you want to generate..."
+                className="w-full h-40 resize-none rounded-xl bg-zinc-900 border border-zinc-800 p-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+              />
             </div>
 
-            <button onClick={generatingImages} className="px-6 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition font-medium">
-              Generate
-            </button>
-          </div>
+            <div className="flex items-center justify-between">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-lg bg-zinc-800 text-sm hover:bg-zinc-700 transition"
+                >
+                  Style
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-lg bg-zinc-800 text-sm hover:bg-zinc-700 transition"
+                >
+                  Model
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-lg bg-zinc-800 text-sm hover:bg-zinc-700 transition"
+                >
+                  Settings
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className={`px-6 py-2 rounded-lg font-medium transition
+                  ${
+                    loading
+                      ? "bg-indigo-400 cursor-not-allowed"
+                      : "bg-indigo-600 hover:bg-indigo-500"
+                  }
+                `}
+              >
+                {loading ? "Generating..." : "Generate"}
+              </button>
+            </div>
+          </form>
         </section>
 
         {/* Sidebar */}
@@ -109,5 +143,5 @@ export default function Dashboard() {
         </aside>
       </main>
     </div>
-    )
+  )
 }

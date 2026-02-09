@@ -6,6 +6,7 @@ from slowapi.util import get_remote_address
 from email_validator import validate_email, EmailNotValidError
 from dotenv import load_dotenv
 from email.message import EmailMessage
+
 import smtplib
 import re
 import zxcvbn
